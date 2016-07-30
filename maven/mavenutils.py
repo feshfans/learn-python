@@ -7,14 +7,14 @@ from xml.dom.minidom import Document
 from xml.etree import ElementTree as et
 import time
 import zipfile
+import json
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
 sys.setrecursionlimit(1000000)
 
-#maven仓库目录
-maven_repo = 'F:\maven-repo'
 #pom.xml输出路径
 xmlOutPath="pom.xml"
-#压缩包保存路径
-archive_out_path=maven_repo
 #模板文件路径
 xmlTemplate='template.xml'
 
@@ -23,6 +23,22 @@ errLogs=[]
 
 dom=xml.parse(xmlTemplate)
 dependenciesNode=dom.getElementsByTagName('dependencies')[0]
+f=file('config.json')
+json_data=json.load(f)
+#maven仓库目录
+maven_repo= json_data['maven_repo']
+#压缩包保存路径
+archive_out_path=json_data['archive_out_path']
+
+if maven_repo=="":
+    print unicode('请配置maven仓库地址','utf-8')
+    exit(1)
+if archive_out_path=="":
+    print unicode('请配置压缩文件输出路径','utf-8')
+    exit(1)
+
+print unicode('配置检测通过。。。','utf-8')
+
 
 class Pom:
     def __init__(self, groupId, artifactId, version, type):
@@ -102,9 +118,11 @@ def createDenpenceny(pom):
 
     return dependencyNode
 
+print unicode('开始检测maven仓库。。。','utf-8')
 parseDir(maven_repo)
+print unicode('检测maven仓库完成。。。','utf-8')
 
-#生成依赖节点
+# 生成依赖节点
 for jarfile in jarFiles:
     files=os.listdir(jarfile)
     for file in files:
@@ -132,11 +150,13 @@ f.close()
 # print statinfo.st_ctime
 # print time.time()
 
+
 #获取上一次打包的时间点
 f=open(r'archive.log')
 preVersion=f.readline()
 f.close()
 
+print unicode('开始查找新添加的jar。。。','utf-8')
 newJarFiles=[]
 #如果上一次打包的时间点不存在，则默认打全包
 if preVersion=="":
@@ -147,7 +167,9 @@ else: #否则比较时间，将需要打包的文件加入集合中
         ctime_file=statinfo.st_ctime
         if float(ctime_file)>float(preVersion):
             newJarFiles.append(jarfile)
+print unicode('查找jar完成。。。','utf-8')
 
+print unicode('开始压缩文件。。。','utf-8')
 #将文件压缩到指定压缩文件
 f=zipfile.ZipFile(os.path.join(archive_out_path,'archive.zip'),'w',zipfile.ZIP_DEFLATED)
 for jarfile in newJarFiles:
@@ -163,5 +185,7 @@ curTime=time.time()
 f=open('archive.log','w')
 f.write(str(curTime))
 f.close()
+
+print unicode('完成。。。','utf-8')
 
 
